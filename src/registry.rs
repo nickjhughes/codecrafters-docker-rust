@@ -70,7 +70,6 @@ impl Registry {
         let body: serde_json::Value = serde_json::from_str(&resp.text()?)?;
         if let Some(token_value) = body.get("token") {
             self.token = Some(token_value.as_str().unwrap().to_string());
-            // println!("Authed");
         } else {
             anyhow::bail!("auth failed, no token in response");
         }
@@ -102,10 +101,6 @@ impl Registry {
             let text = resp.text()?;
             let manifest: Manifest = serde_json::from_str(&text)?;
             self.manifest = Some(manifest);
-            // println!(
-            //     "Got manifest, with {} layers",
-            //     self.manifest.as_ref().unwrap().layers.len()
-            // );
         } else {
             anyhow::bail!("request failed: {:?}", resp.text());
         }
