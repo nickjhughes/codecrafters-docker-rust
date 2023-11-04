@@ -44,6 +44,11 @@ fn main() -> Result<()> {
     std::os::unix::fs::chroot(&temp_dir).context("failed to chroot")?;
     std::env::set_current_dir("/").context("failed to chdir")?;
 
+    // Split this process off into its own new PID namespace
+    unsafe {
+        libc::unshare(libc::CLONE_NEWPID);
+    }
+
     let new_command_binary = PathBuf::from("/").join(command_binary);
     let output = std::process::Command::new(&new_command_binary)
         .args(command_args)
