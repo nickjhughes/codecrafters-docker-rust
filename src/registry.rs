@@ -45,7 +45,11 @@ impl Registry {
     const REGISTRY_API_URL: &'static str = "https://registry-1.docker.io/v2";
 
     pub fn new(image_name: &str) -> Self {
-        let (image_name, image_tag) = image_name.split_once(':').unwrap();
+        let (image_name, image_tag) = if image_name.contains(':') {
+            image_name.split_once(':').unwrap()
+        } else {
+            (image_name, "latest")
+        };
 
         Registry {
             image_name: image_name.to_owned(),

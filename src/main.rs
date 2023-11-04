@@ -15,7 +15,7 @@ fn main() -> Result<()> {
     // Create temporary directory
     let temp_dir = tempfile::tempdir().context("failed to create temp directory")?;
 
-    let valid_image_name = image_name.contains(':');
+    let valid_image_name = image_name != "<some_image>";
     if valid_image_name {
         // Connect to registry and get image manifests
         let mut registry = Registry::new(image_name);
@@ -30,15 +30,21 @@ fn main() -> Result<()> {
     std::fs::create_dir_all(temp_dir.path().join("dev/null"))
         .context("failed to create /dev/null")?;
 
-    // Copy command binary into the temporary directory
-    let command_path = PathBuf::from(command);
-    let command_binary = command_path.file_name().unwrap();
-    let temp_command_path = temp_dir.path().join(command_binary);
+    let command_path = if valid_image_name {
+        PathBuf::from(command)
+    } else {
+        // Copy command binary into the temporary directory
+        let command_path = PathBuf::from(command);
+        let command_binary = command_path.file_name().unwrap();
+        let temp_command_path = temp_dir.path().join(command_binary);
 
-    std::fs::copy(&command_path, &temp_command_path).context(format!(
-        "failed to copy command binary from {:?} to {:?}",
-        &command_path, &temp_command_path,
-    ))?;
+        std::fs::copy(&command_path, &temp_command_path).context(format!(
+            "failed to copy command binary from {:?} to {:?}",
+            &command_path, &temp_command_path,
+        ))?;
+
+        PathBuf::from("/").join(command_binary)
+    };
 
     // chroot and chdir into the temporary directory
     std::os::unix::fs::chroot(&temp_dir).context("failed to chroot")?;
@@ -49,14 +55,13 @@ fn main() -> Result<()> {
         libc::unshare(libc::CLONE_NEWPID);
     }
 
-    let new_command_binary = PathBuf::from("/").join(command_binary);
-    let output = std::process::Command::new(&new_command_binary)
+    let output = std::process::Command::new(&command_path)
         .args(command_args)
         .output()
         .with_context(|| {
             format!(
                 "Tried to run {:?} with arguments {:?}",
-                new_command_binary, command_args
+                command_path, command_args
             )
         })?;
 
