@@ -20,5 +20,8 @@ fn main() -> Result<()> {
     print!("{}", std_out);
     eprint!("{}", std_err);
 
+    if let Some(status_code) = output.status.code() {
+        std::process::exit(status_code);
+    }
     Ok(())
 }
