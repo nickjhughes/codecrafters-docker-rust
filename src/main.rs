@@ -1,14 +1,30 @@
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
+use registry::Registry;
+
+mod registry;
+
 // Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
+    let image_name = &args[2];
     let command = &args[3];
     let command_args = &args[4..];
 
     // Create temporary directory
     let temp_dir = tempfile::tempdir().context("failed to create temp directory")?;
+
+    let valid_image_name = image_name.contains(':');
+    if valid_image_name {
+        // Connect to registry and get image manifests
+        let mut registry = Registry::new(image_name);
+        registry.auth()?;
+        registry.get_manifests()?;
+
+        // Download image layers
+        registry.download_layers(temp_dir.path())?;
+    }
 
     // Create /dev/null in temporary directory
     std::fs::create_dir_all(temp_dir.path().join("dev/null"))
